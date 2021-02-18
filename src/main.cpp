@@ -303,16 +303,20 @@ void loop()
    }
 
     int read_raw;
-    adc2_config_channel_atten( ADC2_CHANNEL_7, ADC_ATTEN_11db );
+    adc2_config_channel_atten( ADC2_CHANNEL_9, ADC_ATTEN_11db );
 
-     esp_err_t r = adc2_get_raw( ADC2_CHANNEL_7, ADC_WIDTH_12Bit, &read_raw);
+     esp_err_t r = adc2_get_raw( ADC2_CHANNEL_9, ADC_WIDTH_12Bit, &read_raw);
      if ( r == ESP_OK ) {
-         printf("%d\n", read_raw );
+         printf("Current - %d\n", read_raw );
      } else if ( r == ESP_ERR_TIMEOUT ) {
          printf("ADC2 used by Wi-Fi.\n");
      }
 
-   
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_5,ADC_ATTEN_DB_11);
+    int val = adc1_get_raw(ADC1_CHANNEL_5);
+    printf("Upit - %d\n", val);
+  
    sleep(10);
 
 //-------------------------------------------------------------------------------------------------------------------------------------------------

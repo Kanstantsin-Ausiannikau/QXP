@@ -1,0 +1,1 @@
+Before build - need to set #define CONFIG_DISABLE_HAL_LOCKS 1 in esp32-hal.h

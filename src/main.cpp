@@ -6,7 +6,7 @@
 
 #define TX_PIN 32
 #define Upit 27
-#define TXCURRENT_PIN 33
+//#define TXCURRENT_PIN 26
 
 #define CLK 14
 #define MISO 12
@@ -20,21 +20,24 @@
 #define UD 16
 
 void onTimer();
+void onTimer2();
 void RTC_init();
 void X9C_init();
 void tx_start();
 void tx_stop();
 void setResistance(int percent);
 float getUpitValue();
-float getTXCurrent();
+uint16_t getTXCurrent();
+IRAM_ATTR void getData(uint16_t data[100]);
+IRAM_ATTR uint16_t getRXValue();
 
 float coil_freq = 8200;
 
-float period = 1.0 / 8200;
-int64_t halfPeriodTime = (int64_t)(1 / (coil_freq * 2) * 1000000); //in us
+//float period = 1.0 / 8200;
+int64_t halfPeriodTime = (int64_t)(1.0 / (coil_freq * 2) * 1000000); //in us
 
 int64_t tx_upfront_time;
-int64_t rx_upfront_time;
+//int64_t rx_upfront_time;
 
 int rx_current_value = 0;
 int rx_previous_value = 0;
@@ -43,31 +46,45 @@ int64_t rx_current_value_time = 0;
 int64_t rx_previous_value_time = 0;
 
 hw_timer_t *timer = NULL;
+
+hw_timer_t *timer2 = NULL;
+
 portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
+
+int64_t period_time;
 
 bool txLow;
 
-int rx_data[100];
-int tx_data[100];
-int64_t rx_time[100];
-int64_t tx_time[100];
-
 int rx_index = 0;
-
-bool write_flag = false;
 
 BluetoothSerial ESP_BT;
 int incoming;
 
+byte quadrant;
+
+int32_t volatile cX;
+int32_t volatile cY;
+
+int32_t p0;
+int32_t p90;
+int32_t p180;
+int32_t p270;
+
 void setup()
 {
+  quadrant = 1;
+  cX = 0;
+  cY = 0;
+
 
   //Upit ADC setup
   adc1_config_width(ADC_WIDTH_BIT_12);
   adc1_config_channel_atten(ADC1_CHANNEL_5, ADC_ATTEN_DB_11);
 
   //TXCurrent ADC setup
-  adc2_config_channel_atten(ADC2_CHANNEL_9, ADC_ATTEN_DB_11);
+  adc2_config_channel_atten(ADC2_CHANNEL_9, ADC_ATTEN_DB_0);
 
   X9C_init();
 
@@ -93,11 +110,27 @@ void setup()
 
   timer = timerBegin(0, 1, true);
   timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, 4480 / 2, true);
+  timerAlarmWrite(timer, 4800 / 4 * 10 *100, true);
 
-  tx_start();
+  timer2 = timerBegin(1, 1, true);
+  timerAttachInterrupt(timer2, &onTimer2, true);
+  timerAlarmWrite(timer2, 10000000, true);
 
-  delay(100);
+  timerAlarmEnable(timer2);
+}
+
+void tx_start()
+{
+  quadrant = 1;
+
+  timerAlarmEnable(timer);
+}
+void tx_stop()
+
+{
+  txLow = true;
+  digitalWrite(TX_PIN, LOW);
+  timerAlarmDisable(timer);
 }
 
 void X9C_init()
@@ -152,33 +185,100 @@ void RTC_init()
   //SPI.setFrequency(5000L);
 }
 
-void IRAM_ATTR onTimer()
+void IRAM_ATTR onTimer2()
 {
-  portENTER_CRITICAL_ISR(&timerMux);
-  if (txLow)
-  {
-    txLow = false;
-    digitalWrite(TX_PIN, HIGH);
-    tx_upfront_time = esp_timer_get_time();
-  }
-  else
-  {
-    txLow = true;
-    digitalWrite(TX_PIN, LOW);
-  }
+  portENTER_CRITICAL_ISR(&timer2Mux);
 
-  portEXIT_CRITICAL_ISR(&timerMux);
+  // double vdi;
+  // double amp;
+   tx_start();
+   usleep(100000);
+
+  // vdi = atan2(cX, cY) * 57;
+  // amp = sqrt((double)cX * (double)cX / 10000 + (double)cY * (double)cY / 10000);
+
+  // portEXIT_CRITICAL_ISR(&timer2Mux);
+
+   Serial.print(cX/50);
+   Serial.print(";");
+   Serial.println(cY / 50);
+  // Serial.print(vdi);
+  // Serial.print(";");
+  // Serial.println(amp);
+  // Serial.print("time = ");
+
 }
 
-void loop()
+void IRAM_ATTR onTimer()
 {
-  for (int i = 0; i <= 100; i += 1)
-  {
-    //setResistance(i);
-    //Serial.println(i);
-    //delay(500);
-  }
+  // portENTER_CRITICAL_ISR(&timerMux);
 
+  // if (quadrant==5)
+  // {
+  //   quadrant = 1;
+  // }
+  // if (quadrant==1)
+  // {
+  //   usleep(3);
+  //   digitalWrite(TX_PIN, HIGH);
+  //   txLow = false;
+  // }
+  // if (quadrant==2)
+  // {
+  //   cX+=getRXValue();
+  //   xCounter++;
+  // }
+  // if (quadrant==3)
+  // {
+  //   usleep(3);
+  //   txLow = true;
+  //   digitalWrite(TX_PIN, LOW);
+  // }
+  // if (quadrant==4)
+  // {
+  //   cY+=getRXValue();
+  //   yCounter++;
+  // }
+  // quadrant++;
+
+  // if (yCounter==100)
+  // {
+  //   tx_stop();
+  // }
+  // portEXIT_CRITICAL_ISR(&timerMux);
+  portENTER_CRITICAL(&timerMux);
+  cX=0;
+  cY=0;
+ for (int i = 0; i <= 80; i++)
+   {
+     digitalWrite(TX_PIN, HIGH);
+     txLow = false;
+     p0 = getRXValue();
+     usleep(23);
+     
+     p90 = getRXValue();
+     usleep(23);
+
+     digitalWrite(TX_PIN, LOW);
+     txLow = true;
+     p180 = getRXValue();
+     usleep(23);
+
+     p270 = (uint32_t)getRXValue();
+     usleep(23);
+
+     if (i>30)
+     {
+       cX += (p180 - p0);
+       cY += (p270 - p90);
+     }
+   }
+   tx_stop();
+  portEXIT_CRITICAL(&timerMux);
+}
+
+void BT_getData()
+{
   if (ESP_BT.available()) // Проверяем, не получили ли мы что-либо от Bluetooth модуля
   {
     incoming = ESP_BT.read(); // Читаем, что получили
@@ -197,73 +297,30 @@ void loop()
       ESP_BT.println("LED turned OFF");
     }
   }
-
-  sleep(1);
-
-  for (int i = 0; i < 100; i++)
-  {
-    rx_time[i] = esp_timer_get_time();
-    rx_data[i] = (txLow) ? 0 : 65536;
-    digitalWrite(SS, HIGH);
-    usleep(3);
-    digitalWrite(SS, LOW);
-    tx_data[i] = SPI.transfer16(0x00);
-    tx_time[i] = esp_timer_get_time();
-  }
-
-  Serial.println((int)(tx_time[99] - tx_time[0]));
-
-  Serial.println("tx___");
-
-  for (int i = 0; i < 100; i++)
-  {
-    Serial.println(tx_data[i]);
-  }
-
-  Serial.println("rx_data___");
-
-  for (int i = 0; i < 100; i++)
-  {
-    Serial.println(rx_data[i]);
-  }
-
-  Serial.println("tx_time___");
-  for (int i = 0; i < 100; i++)
-  {
-    Serial.println((long)tx_time[i]);
-  }
-
-  Serial.println("rx_time___");
-  for (int i = 0; i < 100; i++)
-  {
-    Serial.println((long)rx_time[i]);
-  }
-
-  printf("Upit - %f\n", getUpitValue());
-  printf("TXcurrent - %f\n", getTXCurrent());
-
-
-  Serial.println("txCurrent___");
-  for (int i = 0; i < 100; i++)
-  {
-    Serial.println(getTXCurrent());
-  }
-  sleep(10);
-  //   int c = analogRead(TXCURRENT_PIN);
 }
 
-void tx_start()
+IRAM_ATTR uint16_t getRXValue()
 {
-  txLow = true;
-  digitalWrite(TX_PIN, LOW);
-  timerAlarmEnable(timer);
+  digitalWrite(SS, HIGH);
+  usleep(3);
+  digitalWrite(SS, LOW);
+  return SPI.transfer16(0x00); // / 65535.0 * 5 - 2.5;
 }
-void tx_stop()
 
+
+
+void loop()
 {
-  txLow = true;
-  digitalWrite(TX_PIN, LOW);
-  timerAlarmDisable(timer);
+
+  // long start = esp_timer_get_time();
+
+  // float s =0;
+  // for (int i=1;i<=1000000;i++)
+  // {
+  //   s+=atan2(1,i)*57;
+  // }
+
+  //Serial.println((long)esp_timer_get_time() - start);
 }
 
 float getUpitValue()
@@ -272,16 +329,26 @@ float getUpitValue()
   return (val / 4096.0) * 3.3 * (3.3 + 18) / 3.3;
 }
 
-float getTXCurrent()
+IRAM_ATTR void getData(uint16_t data[100])
 {
+
+  for (int i = 0; i < 100; i++)
+  {
+    data[i] = getTXCurrent();
+  }
+}
+
+IRAM_ATTR uint16_t getTXCurrent()
+{
+
+  //  return analogRead(TXCURRENT_PIN);
+
   int read_raw;
   esp_err_t r = adc2_get_raw(ADC2_CHANNEL_9, ADC_WIDTH_12Bit, &read_raw);
 
-  
   if (r == ESP_OK)
   {
-    return (float)read_raw;
-      //return analogRead(TXCURRENT_PIN);
+    return read_raw;
   }
   else
   {

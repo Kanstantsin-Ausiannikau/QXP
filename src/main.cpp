@@ -3,10 +3,11 @@
 #include <driver/adc.h>
 #include "SPI.h"
 #include "BluetoothSerial.h"
+#include "txcoilutil.h"
 
-#define TX_PIN 32
+
+//#define TX_PIN 32
 #define Upit 27
-//#define TXCURRENT_PIN 26
 
 #define CLK 14
 #define MISO 12
@@ -19,12 +20,12 @@
 #define INC 17
 #define UD 16
 
-void onTimer();
-void onTimer2();
+// void onTimer();
+// void onTimer2();
 void RTC_init();
 void X9C_init();
-void tx_start();
-void tx_stop();
+// void tx_start();
+// void tx_stop();
 void setResistance(int percent);
 float getUpitValue();
 uint16_t getTXCurrent();
@@ -45,13 +46,13 @@ int rx_previous_value = 0;
 int64_t rx_current_value_time = 0;
 int64_t rx_previous_value_time = 0;
 
-hw_timer_t *timer = NULL;
+// hw_timer_t *timer = NULL;
 
-hw_timer_t *timer2 = NULL;
+// hw_timer_t *timer2 = NULL;
 
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+// portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
+// portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
 
 int64_t period_time;
 
@@ -108,30 +109,32 @@ void setup()
 
   RTC_init();
 
-  timer = timerBegin(0, 1, true);
-  timerAttachInterrupt(timer, &onTimer, true);
-  timerAlarmWrite(timer, 4800 / 4 * 10 *100, true);
+  tx_start(8200);
 
-  timer2 = timerBegin(1, 1, true);
-  timerAttachInterrupt(timer2, &onTimer2, true);
-  timerAlarmWrite(timer2, 10000000, true);
+  // timer = timerBegin(0, 1, true);
+  // timerAttachInterrupt(timer, &onTimer, true);
+  // timerAlarmWrite(timer, 4800 / 4 * 10 *100, true);
 
-  timerAlarmEnable(timer2);
+  // timer2 = timerBegin(1, 1, true);
+  // timerAttachInterrupt(timer2, &onTimer2, true);
+  // timerAlarmWrite(timer2, 10000000, true);
+
+  // timerAlarmEnable(timer2);
 }
 
-void tx_start()
-{
-  quadrant = 1;
+// void tx_start()
+// {
+//   quadrant = 1;
 
-  timerAlarmEnable(timer);
-}
-void tx_stop()
+//   timerAlarmEnable(timer);
+// }
+//void tx_stop()
 
-{
-  txLow = true;
-  digitalWrite(TX_PIN, LOW);
-  timerAlarmDisable(timer);
-}
+// {
+//   txLow = true;
+//   digitalWrite(TX_PIN, LOW);
+//   timerAlarmDisable(timer);
+// }
 
 void X9C_init()
 {
@@ -185,97 +188,97 @@ void RTC_init()
   //SPI.setFrequency(5000L);
 }
 
-void IRAM_ATTR onTimer2()
-{
-  portENTER_CRITICAL_ISR(&timer2Mux);
+// void IRAM_ATTR onTimer2()
+// {
+//   portENTER_CRITICAL_ISR(&timer2Mux);
 
-  // double vdi;
-  // double amp;
-   tx_start();
-   usleep(100000);
+//   // double vdi;
+//   // double amp;
+//    //tx_start();
+//    usleep(100000);
 
-  // vdi = atan2(cX, cY) * 57;
-  // amp = sqrt((double)cX * (double)cX / 10000 + (double)cY * (double)cY / 10000);
+//   // vdi = atan2(cX, cY) * 57;
+//   // amp = sqrt((double)cX * (double)cX / 10000 + (double)cY * (double)cY / 10000);
 
-  // portEXIT_CRITICAL_ISR(&timer2Mux);
+//   // portEXIT_CRITICAL_ISR(&timer2Mux);
 
-   Serial.print(cX/50);
-   Serial.print(";");
-   Serial.println(cY / 50);
-  // Serial.print(vdi);
-  // Serial.print(";");
-  // Serial.println(amp);
-  // Serial.print("time = ");
+//    Serial.print(cX/50);
+//    Serial.print(";");
+//    Serial.println(cY / 50);
+//   // Serial.print(vdi);
+//   // Serial.print(";");
+//   // Serial.println(amp);
+//   // Serial.print("time = ");
 
-}
+// }
 
-void IRAM_ATTR onTimer()
-{
-  // portENTER_CRITICAL_ISR(&timerMux);
+// void IRAM_ATTR onTimer()
+// {
+//   // portENTER_CRITICAL_ISR(&timerMux);
 
-  // if (quadrant==5)
-  // {
-  //   quadrant = 1;
-  // }
-  // if (quadrant==1)
-  // {
-  //   usleep(3);
-  //   digitalWrite(TX_PIN, HIGH);
-  //   txLow = false;
-  // }
-  // if (quadrant==2)
-  // {
-  //   cX+=getRXValue();
-  //   xCounter++;
-  // }
-  // if (quadrant==3)
-  // {
-  //   usleep(3);
-  //   txLow = true;
-  //   digitalWrite(TX_PIN, LOW);
-  // }
-  // if (quadrant==4)
-  // {
-  //   cY+=getRXValue();
-  //   yCounter++;
-  // }
-  // quadrant++;
+//   // if (quadrant==5)
+//   // {
+//   //   quadrant = 1;
+//   // }
+//   // if (quadrant==1)
+//   // {
+//   //   usleep(3);
+//   //   digitalWrite(TX_PIN, HIGH);
+//   //   txLow = false;
+//   // }
+//   // if (quadrant==2)
+//   // {
+//   //   cX+=getRXValue();
+//   //   xCounter++;
+//   // }
+//   // if (quadrant==3)
+//   // {
+//   //   usleep(3);
+//   //   txLow = true;
+//   //   digitalWrite(TX_PIN, LOW);
+//   // }
+//   // if (quadrant==4)
+//   // {
+//   //   cY+=getRXValue();
+//   //   yCounter++;
+//   // }
+//   // quadrant++;
 
-  // if (yCounter==100)
-  // {
-  //   tx_stop();
-  // }
-  // portEXIT_CRITICAL_ISR(&timerMux);
-  portENTER_CRITICAL(&timerMux);
-  cX=0;
-  cY=0;
- for (int i = 0; i <= 80; i++)
-   {
-     digitalWrite(TX_PIN, HIGH);
-     txLow = false;
-     p0 = getRXValue();
-     usleep(23);
+//   // if (yCounter==100)
+//   // {
+//   //   tx_stop();
+//   // }
+//   // portEXIT_CRITICAL_ISR(&timerMux);
+//   portENTER_CRITICAL(&timerMux);
+//   cX=0;
+//   cY=0;
+//  for (int i = 0; i <= 80; i++)
+//    {
+//      digitalWrite(TX_PIN, HIGH);
+//      txLow = false;
+//      p0 = getRXValue();
+//      usleep(23);
      
-     p90 = getRXValue();
-     usleep(23);
+//      p90 = getRXValue();
+//      usleep(23);
 
-     digitalWrite(TX_PIN, LOW);
-     txLow = true;
-     p180 = getRXValue();
-     usleep(23);
+//      digitalWrite(TX_PIN, LOW);
+//      txLow = true;
+//      p180 = getRXValue();
+//      usleep(23);
 
-     p270 = (uint32_t)getRXValue();
-     usleep(23);
+//      p270 = (uint32_t)getRXValue();
+//      usleep(23);
 
-     if (i>30)
-     {
-       cX += (p180 - p0);
-       cY += (p270 - p90);
-     }
-   }
-   tx_stop();
-  portEXIT_CRITICAL(&timerMux);
-}
+//      if (i>30)
+//      {
+//        cX += (p180 - p0);
+//        cY += (p270 - p90);
+//      }
+//    }
+//    tx_stop();
+//   portEXIT_CRITICAL(&timerMux);
+// }
 
 void BT_getData()
 {

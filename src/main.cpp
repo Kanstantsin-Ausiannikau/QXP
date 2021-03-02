@@ -5,35 +5,23 @@
 #include "BluetoothSerial.h"
 #include "txcoilutil.h"
 #include "rxcoilutil.h"
+#include "voltageregulator.h"
+#include "compensator.h"
 
 //#define TX_PIN 32
-#define Upit 27
+//#define Upit 27
 
 #define LED_PIN 22
 #define UCOMP_PIN 25
 
-#define CS 4
-#define INC 17
-#define UD 16
 
 // void onTimer();
 // void onTimer2();
 
-void X9C_init();
 // void tx_start();
 // void tx_stop();
-void setResistance(int percent);
+
 float getUpitValue();
-uint16_t getTXCurrent();
-IRAM_ATTR void getData(uint16_t data[100]);
-
-int64_t tx_upfront_time;
-
-int rx_current_value = 0;
-int rx_previous_value = 0;
-
-int64_t rx_current_value_time = 0;
-int64_t rx_previous_value_time = 0;
 
 // hw_timer_t *timer = NULL;
 
@@ -43,30 +31,18 @@ int64_t rx_previous_value_time = 0;
 
 // portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
 
-int64_t period_time;
-
-bool txLow;
-
-int rx_index = 0;
-
 BluetoothSerial ESP_BT;
 int incoming;
 
-//byte quadrant;
-
-int32_t volatile cX;
-int32_t volatile cY;
 
 void setup()
 {
   rx_init();
-
   tx_init();
+  X9C_init();
 
    //TXCurrent ADC setup
   adc2_config_channel_atten(ADC2_CHANNEL_9, ADC_ATTEN_DB_0);
-
-  X9C_init();
 
   delayMicroseconds(1000);
 
@@ -97,42 +73,7 @@ void setup()
   delay(1000);
 }
 
-void X9C_init()
-{
-  pinMode(CS, OUTPUT);
-  pinMode(INC, OUTPUT);
-  pinMode(UD, OUTPUT);
-  digitalWrite(CS, HIGH); // X9C в режиме низкого потребления
-  digitalWrite(INC, HIGH);
-  digitalWrite(UD, HIGH);
-}
 
-void setResistance(int percent)
-{
-  // Понижаем сопротивление до 0%:
-  digitalWrite(UD, LOW); // выбираем понижение
-  digitalWrite(CS, LOW); // выбираем потенциометр X9C
-  for (int i = 0; i < 100; i++)
-  { // т.к. потенциометр имеет 100 доступных позиций
-    digitalWrite(INC, LOW);
-    delayMicroseconds(1);
-    digitalWrite(INC, HIGH);
-    delayMicroseconds(1);
-  }
-
-  // Поднимаем сопротивление до нужного:
-  digitalWrite(UD, HIGH);
-  for (int i = 0; i < percent; i++)
-  {
-    digitalWrite(INC, LOW);
-    delayMicroseconds(1);
-    digitalWrite(INC, HIGH);
-    delayMicroseconds(1);
-  }
-
-  digitalWrite(CS, HIGH); /* запоминаем значение 
-  и выходим из режима настройки */
-}
 
 // void IRAM_ATTR onTimer2()
 // {
@@ -267,8 +208,4 @@ void loop()
   delay(500);
 }
 
-float getUpitValue()
-{
-  int val = adc1_get_raw(ADC1_CHANNEL_5);
-  return (val / 4096.0) * 3.3 * (3.3 + 18) / 3.3;
-}
+

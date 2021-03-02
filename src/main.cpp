@@ -6,11 +6,8 @@
 #include "txcoilutil.h"
 #include "rxcoilutil.h"
 
-
 //#define TX_PIN 32
 #define Upit 27
-
-
 
 #define LED_PIN 22
 #define UCOMP_PIN 25
@@ -60,22 +57,13 @@ int incoming;
 int32_t volatile cX;
 int32_t volatile cY;
 
-
-
 void setup()
 {
+  rx_init();
 
-  RTC_init();
-  //quadrant = 1;
-  cX = 0;
-  cY = 0;
+  tx_init();
 
-
-  //Upit ADC setup
-  adc1_config_width(ADC_WIDTH_BIT_12);
-  adc1_config_channel_atten(ADC1_CHANNEL_5, ADC_ATTEN_DB_11);
-
-  //TXCurrent ADC setup
+   //TXCurrent ADC setup
   adc2_config_channel_atten(ADC2_CHANNEL_9, ADC_ATTEN_DB_0);
 
   X9C_init();
@@ -87,7 +75,6 @@ void setup()
   Serial.println("QXP is Ready to Pair"); // По готовности сообщаем, что устройство готово к сопряжению
 
   pinMode(TX_PIN, OUTPUT);
-  //pinMode(TXCURRENT_PIN, INPUT);
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
@@ -95,9 +82,17 @@ void setup()
   dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
   dac_output_voltage(DAC_CHANNEL_1, 200);
 
-  RTC_init();
+  //tx_start(8928);
+  //tx_start(9165);
 
-  tx_start(8928);
+  
+  uint16_t freq =  searchResonanceFreq(4000, 16000, 200);
+  Serial.println("Freq iteration 1 = "+ String(freq));
+
+  freq =  searchResonanceFreq(freq-100, freq+100, 5);
+  Serial.println("Freq iteration 2 = "+ String(freq));
+
+  tx_start(freq);
 
   delay(1000);
 }
@@ -138,8 +133,6 @@ void setResistance(int percent)
   digitalWrite(CS, HIGH); /* запоминаем значение 
   и выходим из режима настройки */
 }
-
-
 
 // void IRAM_ATTR onTimer2()
 // {
@@ -211,7 +204,7 @@ void setResistance(int percent)
 //      txLow = false;
 //      p0 = getRXValue();
 //      usleep(23);
-     
+
 //      p90 = getRXValue();
 //      usleep(23);
 
@@ -255,64 +248,27 @@ void BT_getData()
   }
 }
 
-
-
-
 void loop()
 {
+
   int32_t dx=0;
   int32_t dy=0;
-
   getXY(dx,dy);
-
-  
-
-  //Serial.println(String(dx) + ";" + String(dy));
-  Serial.println(atan((float)dx/dy)*57);
+  Serial.println(String(dx) + ";" + String(dy));
+  //Serial.println(atan2((float)dx/dy)*57);
 
 
-  delay(100);
 
-  // long start = esp_timer_get_time();
+  //for (int i=0;i<500;i++)
+  //{
+  //Serial.println(currentSum);
+  //}
 
-  // float s =0;
-  // for (int i=1;i<=1000000;i++)
-  // {
-  //   s+=atan2(1,i)*57;
-  // }
-
-  //Serial.println((long)esp_timer_get_time() - start);
+  delay(500);
 }
 
 float getUpitValue()
 {
   int val = adc1_get_raw(ADC1_CHANNEL_5);
   return (val / 4096.0) * 3.3 * (3.3 + 18) / 3.3;
-}
-
-IRAM_ATTR void getData(uint16_t data[100])
-{
-
-  for (int i = 0; i < 100; i++)
-  {
-    data[i] = getTXCurrent();
-  }
-}
-
-IRAM_ATTR uint16_t getTXCurrent()
-{
-
-  //  return analogRead(TXCURRENT_PIN);
-
-  int read_raw;
-  esp_err_t r = adc2_get_raw(ADC2_CHANNEL_9, ADC_WIDTH_12Bit, &read_raw);
-
-  if (r == ESP_OK)
-  {
-    return read_raw;
-  }
-  else
-  {
-    return -1;
-  }
 }

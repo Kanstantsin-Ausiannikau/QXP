@@ -16,17 +16,14 @@ IRAM_ATTR uint16_t getRXValue()
   return SPI.transfer16(0x00); // / 65535.0 * 5 - 2.5;
 }
 
-void RTC_init()
+void rx_init()
 {
   pinMode(SS, OUTPUT);
   pinMode(MISO, INPUT);
-  //pinMode(MOSI, OUTPUT);
   pinMode(CLK, OUTPUT);
 
   SPI.begin(CLK, MISO, -1, SS);
-  //SPI.setBitOrder(MSBFIRST);
   SPI.setBitOrder(MSBFIRST);
   SPI.setDataMode(SPI_MODE3);
   SPI.setFrequency(20000000L);
-  //SPI.setFrequency(5000L);
 }

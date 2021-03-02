@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <driver/adc.h>
 #include "txcoilutil.h"
 #include "rxcoilutil.h"
 
@@ -103,7 +104,7 @@ void tx_start(uint16_t freq)
     txFlag = false;
     quadrant = 1;
 
-    Serial.println("quater period time " + String(quaterPeriod));
+    //Serial.println("quater period time " + String(quaterPeriod));
 
     txHigh = false;
     digitalWrite(TX_PIN, LOW);
@@ -123,11 +124,38 @@ void tx_stop()
     timerAlarmDisable(txTimer);
 }
 
-uint16_t searchResonanceFreq(uint16_t startFreq, uint16_t endFreq)
+uint16_t searchResonanceFreq(uint16_t startFreq, uint16_t endFreq, uint16_t step)
 {
-    return 0;
+  int16_t findedFreq = startFreq;
+  int32_t freqCurrent = 0;
+
+  for (int f = startFreq; f < endFreq; f = f + step)
+  {
+    tx_start(f);
+    int32_t currentSum = 0;
+    for (int i = 0; i < 5000; i++)
+    {
+        currentSum += getTXCurrent();
+    }
+    tx_stop();
+
+    if (currentSum>freqCurrent)
+    {
+        freqCurrent = currentSum;
+        findedFreq = f;
+    }
+  }
+    return findedFreq;
 }
 
-void init()
+void tx_init()
 {
+    //TX current ADC setup
+    adc1_config_width(ADC_WIDTH_BIT_12);
+    adc1_config_channel_atten(ADC1_CHANNEL_7, ADC_ATTEN_DB_0);
+}
+
+IRAM_ATTR uint16_t getTXCurrent()
+{
+    return adc1_get_raw(ADC1_CHANNEL_7);
 }

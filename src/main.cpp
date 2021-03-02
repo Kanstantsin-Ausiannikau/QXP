@@ -4,14 +4,13 @@
 #include "SPI.h"
 #include "BluetoothSerial.h"
 #include "txcoilutil.h"
+#include "rxcoilutil.h"
 
 
 //#define TX_PIN 32
 #define Upit 27
 
-#define CLK 14
-#define MISO 12
-#define SS 15
+
 
 #define LED_PIN 22
 #define UCOMP_PIN 25
@@ -22,7 +21,7 @@
 
 // void onTimer();
 // void onTimer2();
-void RTC_init();
+
 void X9C_init();
 // void tx_start();
 // void tx_stop();
@@ -30,15 +29,8 @@ void setResistance(int percent);
 float getUpitValue();
 uint16_t getTXCurrent();
 IRAM_ATTR void getData(uint16_t data[100]);
-IRAM_ATTR uint16_t getRXValue();
-
-float coil_freq = 8200;
-
-//float period = 1.0 / 8200;
-int64_t halfPeriodTime = (int64_t)(1.0 / (coil_freq * 2) * 1000000); //in us
 
 int64_t tx_upfront_time;
-//int64_t rx_upfront_time;
 
 int rx_current_value = 0;
 int rx_previous_value = 0;
@@ -63,19 +55,18 @@ int rx_index = 0;
 BluetoothSerial ESP_BT;
 int incoming;
 
-byte quadrant;
+//byte quadrant;
 
 int32_t volatile cX;
 int32_t volatile cY;
 
-int32_t p0;
-int32_t p90;
-int32_t p180;
-int32_t p270;
+
 
 void setup()
 {
-  quadrant = 1;
+
+  RTC_init();
+  //quadrant = 1;
   cX = 0;
   cY = 0;
 
@@ -95,9 +86,6 @@ void setup()
   ESP_BT.begin("QXP detector");           // Задаем имя вашего устройства Bluetooth
   Serial.println("QXP is Ready to Pair"); // По готовности сообщаем, что устройство готово к сопряжению
 
-  Serial.println("Booting");
-  Serial.println(coil_freq);
-
   pinMode(TX_PIN, OUTPUT);
   //pinMode(TXCURRENT_PIN, INPUT);
 
@@ -109,32 +97,10 @@ void setup()
 
   RTC_init();
 
-  tx_start(8200);
+  tx_start(8928);
 
-  // timer = timerBegin(0, 1, true);
-  // timerAttachInterrupt(timer, &onTimer, true);
-  // timerAlarmWrite(timer, 4800 / 4 * 10 *100, true);
-
-  // timer2 = timerBegin(1, 1, true);
-  // timerAttachInterrupt(timer2, &onTimer2, true);
-  // timerAlarmWrite(timer2, 10000000, true);
-
-  // timerAlarmEnable(timer2);
+  delay(1000);
 }
-
-// void tx_start()
-// {
-//   quadrant = 1;
-
-//   timerAlarmEnable(timer);
-// }
-//void tx_stop()
-
-// {
-//   txLow = true;
-//   digitalWrite(TX_PIN, LOW);
-//   timerAlarmDisable(timer);
-// }
 
 void X9C_init()
 {
@@ -173,20 +139,7 @@ void setResistance(int percent)
   и выходим из режима настройки */
 }
 
-void RTC_init()
-{
-  pinMode(SS, OUTPUT);
-  pinMode(MISO, INPUT);
-  //pinMode(MOSI, OUTPUT);
-  pinMode(CLK, OUTPUT);
 
-  SPI.begin(CLK, MISO, -1, SS);
-  //SPI.setBitOrder(MSBFIRST);
-  SPI.setBitOrder(MSBFIRST);
-  SPI.setDataMode(SPI_MODE3);
-  SPI.setFrequency(20000000L);
-  //SPI.setFrequency(5000L);
-}
 
 // void IRAM_ATTR onTimer2()
 // {
@@ -302,18 +255,23 @@ void BT_getData()
   }
 }
 
-IRAM_ATTR uint16_t getRXValue()
-{
-  digitalWrite(SS, HIGH);
-  usleep(3);
-  digitalWrite(SS, LOW);
-  return SPI.transfer16(0x00); // / 65535.0 * 5 - 2.5;
-}
 
 
 
 void loop()
 {
+  int32_t dx=0;
+  int32_t dy=0;
+
+  getXY(dx,dy);
+
+  
+
+  //Serial.println(String(dx) + ";" + String(dy));
+  Serial.println(atan((float)dx/dy)*57);
+
+
+  delay(100);
 
   // long start = esp_timer_get_time();
 

@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include "driver/i2s.h"
 #include <driver/adc.h>
 #include "txcoilutil.h"
 #include "rxcoilutil.h"
@@ -20,6 +21,12 @@ bool txHigh;
 
 hw_timer_t *txTimer = NULL;
 portMUX_TYPE txTimerMux = portMUX_INITIALIZER_UNLOCKED;
+
+hw_timer_t *compensatorTimer = NULL;
+portMUX_TYPE compensatorTimerMux = portMUX_INITIALIZER_UNLOCKED;
+
+
+uint8_t buffer[36];
 
 uint32_t getQuaterPeriod()
 {
@@ -96,6 +103,12 @@ void IRAM_ATTR onTxTimer()
     portEXIT_CRITICAL_ISR(&txTimerMux);
 }
 
+void IRAM_ATTR onCompensatorTimer()
+{
+    portENTER_CRITICAL_ISR(&compensatorTimerMux);
+    portEXIT_CRITICAL_ISR(&compensatorTimerMux);
+}
+
 void tx_start(uint16_t freq)
 {
     txFreq = freq;
@@ -114,7 +127,35 @@ void tx_start(uint16_t freq)
     timerAlarmWrite(txTimer, quaterPeriod * 10, true);
     timerAlarmEnable(txTimer);
 
+    int i2s_num = 0;   // I2S port number
+    i2s_config_t i2s_config =
+    {
+    .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
+    .sample_rate = freq*36,
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+    .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+    .intr_alloc_flags = 0,   // Default interrupt priority
+    .dma_buf_count = 8,
+    .dma_buf_len = 36,
+    .use_apll = false
+    };
+
+    i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
+    i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);   // Pin 25
+
+    for(int i=0;i<36;i++)
+    {
+       buffer[i] = 200+3*sin(i*10*3.14/180);
+    }
+
+    compensatorTimer = timerBegin(0, 8, true);
+    timerAttachInterrupt(compensatorTimer, &onCompensatorTimer, true);
+    timerAlarmWrite(compensatorTimer, (quaterPeriod*4)/36 * 10, true);
+    timerAlarmEnable(compensatorTimer);
+
     delayMicroseconds(quaterPeriod * 4 * 50);
+
 }
 
 void tx_stop()

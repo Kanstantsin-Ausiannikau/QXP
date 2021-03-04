@@ -24,6 +24,22 @@
 //   .use_apll = false
 // };
 
+    int i2s_num = 0;   // I2S port number
+    i2s_config_t i2s_config =
+    {
+      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
+      .sample_rate = 9165*36*5/4,
+      .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+      .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+      .intr_alloc_flags = 0,   // Default interrupt priority
+      .dma_buf_count = 8,
+      .dma_buf_len = 36*5,
+      .use_apll = false
+    };
+
+
+
 
  //void IRAM_ATTR writeDac();
 
@@ -65,8 +81,22 @@ void setup()
   X9C_init();
 
 
-  dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
-  dac_output_voltage(DAC_CHANNEL_1, 200);
+
+  i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
+  i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);   // Pin 25
+
+    
+
+
+    uint8_t buffer[36*5];
+    for(int i=0;i<36*5;i++)
+    {
+       buffer[i] = 200+50*sin(i*2*3.14/180);
+    }
+
+
+  //dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
+  //dac_output_voltage(DAC_CHANNEL_1, 200);
 
 
   // timer2 = timerBegin(1, 80, true);
@@ -114,8 +144,8 @@ void setup()
 
 
 
-  // while (true)
-  // {
+   while (true)
+   {
 
 
   //   //dac_output_voltage(DAC_CHANNEL_1,buffer[j]);
@@ -129,9 +159,14 @@ void setup()
   //     j=0;
   //   }
 
-  //  //i2s_write((i2s_port_t)i2s_num, buffer, i2s_config.dma_buf_len * sizeof(uint8_t), &bytes_written, 100);
+      
+      size_t bytes_written;
 
-  // }
+      delayMicroseconds(30);
+
+     i2s_write((i2s_port_t)i2s_num, buffer, i2s_config.dma_buf_len * sizeof(uint8_t), &bytes_written, 100);
+
+   }
 
 
   delay(1000);
@@ -269,6 +304,10 @@ void BT_getData()
 
 void loop()
 {
+         //size_t bytes_written;
+        // i2s_write((i2s_port_t)i2s_num, buffer, i2s_config.dma_buf_len * sizeof(uint8_t), &bytes_written, 100);
+
+         //delayMicroseconds(110);
 
   //writeDac();
 

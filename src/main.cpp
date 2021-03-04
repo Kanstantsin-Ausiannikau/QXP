@@ -10,22 +10,22 @@
 
 #include "driver/i2s.h"
 
-int i2s_num = 0;   // I2S port number
-i2s_config_t i2s_config =
-{
-  .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
-  .sample_rate = 82000,
-  .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
-  .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-  .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-  .intr_alloc_flags = 0,   // Default interrupt priority
-  .dma_buf_count = 8,
-  .dma_buf_len = 36,
-  .use_apll = false
-};
+// int i2s_num = 0;   // I2S port number
+// i2s_config_t i2s_config =
+// {
+//   .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN),
+//   .sample_rate = 82485,
+//   .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+//   .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+//   .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+//   .intr_alloc_flags = 0,   // Default interrupt priority
+//   .dma_buf_count = 8,
+//   .dma_buf_len = 36,
+//   .use_apll = false
+// };
 
 
-
+ void IRAM_ATTR writeDac();
 
 //#define TX_PIN 32
 //#define Upit 27
@@ -35,7 +35,7 @@ i2s_config_t i2s_config =
 
 
 // void onTimer();
-// void onTimer2();
+ void onTimer2();
 
 // void tx_start();
 // void tx_stop();
@@ -44,26 +44,35 @@ float getUpitValue();
 
 // hw_timer_t *timer = NULL;
 
-// hw_timer_t *timer2 = NULL;
+ hw_timer_t *timer2 = NULL;
 
 // portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
-// portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
+ portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
 
 BluetoothSerial ESP_BT;
 int incoming;
+
+
 
 
 void setup()
 {
 
 
-
-
-
   rx_init();
   tx_init();
   X9C_init();
+
+
+  dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
+ // dac_output_voltage(DAC_CHANNEL_1, 200);
+
+
+  // timer2 = timerBegin(1, 80, true);
+  //   timerAttachInterrupt(timer2, &onTimer2, true);
+  //   timerAlarmWrite(timer2, 1000, true);
+  //   timerAlarmEnable(timer2);
 
    //TXCurrent ADC setup
   adc2_config_channel_atten(ADC2_CHANNEL_9, ADC_ATTEN_DB_0);
@@ -79,8 +88,6 @@ void setup()
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
-  // dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
-  // dac_output_voltage(DAC_CHANNEL_1, 200);
 
   //tx_start(8928);
   tx_start(9165);
@@ -91,27 +98,40 @@ void setup()
   //tx_start(freq);
 
 
-  i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
-  i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);   // Pin 25
+  // i2s_driver_install((i2s_port_t)i2s_num, &i2s_config, 0, NULL);
+  // i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);   // Pin 25
 
-  Serial.println(i2s_config.dma_buf_len);
+  //Serial.println(i2s_config.dma_buf_len);
 
 
-    uint8_t buffer[i2s_config.dma_buf_len];
-    for(int i=0;i<i2s_config.dma_buf_len;i++)
-    {
-      buffer[i] = 128+50*sin(i*10*3.14/180);
-    }
+
+    // for(int i=0;i<36;i++)
+    // {
+    //   buffer[i] = 200+3*sin(i*10*3.14/180);
+    // }
     //i2s_set_sample_rates((i2s_port_t)0, 920000);
-    size_t bytes_written;
-    bytes_written = 36;
 
-  while (true)
-  {
 
-   i2s_write((i2s_port_t)i2s_num, buffer, i2s_config.dma_buf_len * sizeof(uint8_t), &bytes_written, 100);
 
-  }
+
+  // while (true)
+  // {
+
+
+  //   //dac_output_voltage(DAC_CHANNEL_1,buffer[j]);
+
+  //   dacWrite(25,buffer[j]);
+
+  //   j=j+2;
+
+  //   if (j>35)
+  //   {
+  //     j=0;
+  //   }
+
+  //  //i2s_write((i2s_port_t)i2s_num, buffer, i2s_config.dma_buf_len * sizeof(uint8_t), &bytes_written, 100);
+
+  // }
 
 
   delay(1000);
@@ -119,9 +139,23 @@ void setup()
 
 
 
-// void IRAM_ATTR onTimer2()
-// {
-//   portENTER_CRITICAL_ISR(&timer2Mux);
+//  void IRAM_ATTR onTimer2()
+//  {
+//    //portENTER_CRITICAL_ISR(&timer2Mux);
+
+//     //dacWrite(25, 200);
+
+//      dac_output_voltage(DAC_CHANNEL_1, 200);
+
+//     //  j=j+2;
+
+//     //  if (j>35)
+//     //  {
+//     //    j=0;
+//     //  }
+
+
+
 
 //   // double vdi;
 //   // double amp;
@@ -131,7 +165,7 @@ void setup()
 //   // vdi = atan2(cX, cY) * 57;
 //   // amp = sqrt((double)cX * (double)cX / 10000 + (double)cY * (double)cY / 10000);
 
-//   // portEXIT_CRITICAL_ISR(&timer2Mux);
+ //portEXIT_CRITICAL_ISR(&timer2Mux);
 
 //    Serial.print(cX/50);
 //    Serial.print(";");
@@ -236,6 +270,8 @@ void BT_getData()
 void loop()
 {
 
+  writeDac();
+
   // int32_t dx=0;
   // int32_t dy=0;
   // getXY(dx,dy);
@@ -251,10 +287,42 @@ void loop()
 
   //delay(500);
 
-  for (int deg = 0; deg < 10; deg = deg + 1){
-    dac_output_voltage(DAC_CHANNEL_1, deg);
-    //dacWrite(DAC_CHANNEL_1, ); // Square
-  }
+  // for (int deg = 0; deg < 10; deg = deg + 1){
+  //   //dac_output_voltage(DAC_CHANNEL_1, deg);
+  //   dacWrite(25,deg);
+
+
+  //   //dacWrite(DAC_CHANNEL_1, ); // Square
+  // }
 }
 
+
+ void IRAM_ATTR writeDac()
+ {
+       uint8_t buffer[36];
+        int j=0;
+   
+    for(int i=0;i<36;i++)
+    {
+      buffer[i] = 200+3*sin(i*10*3.14/180);
+    }
+
+    
+  while (true)
+  {
+
+
+    dac_output_voltage(DAC_CHANNEL_1,buffer[j]);
+
+    //dacWrite(25,buffer[j]);
+
+    j=j+1;
+
+    if (j>35)
+    {
+      j=0;
+    }
+
+ }
+ }
 

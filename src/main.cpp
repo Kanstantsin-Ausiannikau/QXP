@@ -25,7 +25,7 @@
 // };
 
 
- void IRAM_ATTR writeDac();
+ //void IRAM_ATTR writeDac();
 
 //#define TX_PIN 32
 //#define Upit 27
@@ -44,11 +44,11 @@ float getUpitValue();
 
 // hw_timer_t *timer = NULL;
 
- hw_timer_t *timer2 = NULL;
+// hw_timer_t *timer2 = NULL;
 
 // portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
- portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
+// portMUX_TYPE timer2Mux = portMUX_INITIALIZER_UNLOCKED;
 
 BluetoothSerial ESP_BT;
 int incoming;
@@ -66,7 +66,7 @@ void setup()
 
 
   dac_output_enable(DAC_CHANNEL_1); //компенсация - 2.5 вольта для средней точки
- // dac_output_voltage(DAC_CHANNEL_1, 200);
+  dac_output_voltage(DAC_CHANNEL_1, 200);
 
 
   // timer2 = timerBegin(1, 80, true);
@@ -105,10 +105,10 @@ void setup()
 
 
 
-    // for(int i=0;i<36;i++)
-    // {
-    //   buffer[i] = 200+3*sin(i*10*3.14/180);
-    // }
+      // for(int i=0;i<36;i++)
+      // {
+      //   buffer[i] = 200+3*sin(i*10*3.14/180);
+      // }
     //i2s_set_sample_rates((i2s_port_t)0, 920000);
 
 
@@ -270,7 +270,7 @@ void BT_getData()
 void loop()
 {
 
-  writeDac();
+  //writeDac();
 
   // int32_t dx=0;
   // int32_t dy=0;
@@ -297,32 +297,32 @@ void loop()
 }
 
 
- void IRAM_ATTR writeDac()
- {
-       uint8_t buffer[36];
-        int j=0;
+//  void IRAM_ATTR writeDac()
+//  {
+//        uint8_t buffer[36];
+//         int j=0;
    
-    for(int i=0;i<36;i++)
-    {
-      buffer[i] = 200+3*sin(i*10*3.14/180);
-    }
+//     for(int i=0;i<36;i++)
+//     {
+//       buffer[i] = 200+3*sin(i*10*3.14/180);
+//     }
 
     
-  while (true)
-  {
+//   while (true)
+//   {
 
 
-    dac_output_voltage(DAC_CHANNEL_1,buffer[j]);
+//     dac_output_voltage(DAC_CHANNEL_1,buffer[j]);
 
-    //dacWrite(25,buffer[j]);
+//     //dacWrite(25,buffer[j]);
 
-    j=j+1;
+//     j=j+1;
 
-    if (j>35)
-    {
-      j=0;
-    }
+//     if (j>35)
+//     {
+//       j=0;
+//     }
 
- }
- }
+//  }
+//  }
 
